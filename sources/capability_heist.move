@@ -10,6 +10,9 @@ module overmind::capability_heist {
     use aptos_std::capability;
     use aptos_framework::account::{Self, SignerCapability};
     use std::vector;
+    //
+    // use aptos_std::debug;
+    //
 
     friend overmind::capability_heist_test;
 
@@ -40,10 +43,14 @@ module overmind::capability_heist {
     const OPEN_VAULT_QUESTION: vector<u8> = b"Can capability be stored in the global storage? The answer should start with a capital letter (Yes/No)";
     const OPEN_VAULT_ANSWER: vector<u8> = x"51d13ec71721d968037b05371474cbba6e0acb3d336909662489d0ff1bf58b028b67b3c43e04ff2aa112529e2b6d78133a4bb2042f9c685dc9802323ebd60e10";
 
-    const ENTER_BANK_USER_ANSWER: vector<u8> = b"";
-    const TAKE_HOSTAGE_USER_ANSWER: vector<u8> = b"";
-    const GET_KEYCARD_USER_ANSWER: vector<u8> = b"";
-    const OPEN_VAULT_USER_ANSWER: vector<u8> = b"";
+    // const ENTER_BANK_USER_ANSWER: vector<u8> = b"init";
+    // const ENTER_BANK_USER_ANSWER: vector<u8> = b"public entry fun init(robber: &signer)";
+    const ENTER_BANK_USER_ANSWER: vector<u8> = b"create";
+    // const TAKE_HOSTAGE_USER_ANSWER: vector<u8> = b"No";
+    const TAKE_HOSTAGE_USER_ANSWER: vector<u8> = b"Yes";
+    // const GET_KEYCARD_USER_ANSWER: vector<u8> = b"1";
+    const GET_KEYCARD_USER_ANSWER: vector<u8> = b"2";
+    const OPEN_VAULT_USER_ANSWER: vector<u8> = b"No";
 
     /////////////////////////
     // CAPABILITY FEATURES //
@@ -67,13 +74,27 @@ module overmind::capability_heist {
         @param robber - player of the game
     */
     public entry fun init(robber: &signer) {
-        // TODO: Assert the signer is the valid robber
+        // 1: Assert the signer is the valid robber
+        // debug::print(signer);
+        // assert!(signer::address_of(robber) == @robber, ERROR_ACCESS_DENIED);
+        assert_valid_robber(robber);
 
-        // TODO: Create a resource account
+        // 2: Create a resource account
+        let (resource, signer_cap) = account::create_resource_account(robber, SEED);
 
-        // TODO: Create all the four capabilities
+        // 3: Create all the four capabilities
+        // capability::create<EnterBank>(&resource, &EnterBank{});
+        // capability::create<TakeHostage>(&resource, &TakeHostage{});
+        // capability::create<GetKeycard>(&resource, &GetKeycard{});
+        // capability::create<OpenVault>(&resource, &OpenVault{});
+        //
+        capability::create(&resource, &EnterBank{});
+        capability::create(&resource, &TakeHostage{});
+        capability::create(&resource, &GetKeycard{});
+        capability::create(&resource, &OpenVault{});
 
-        // TODO: Move Robber to the signer
+        // 4: Move Robber to the signer
+        move_to(robber, Robber {cap: signer_cap});
     }
 
     /*
@@ -83,11 +104,22 @@ module overmind::capability_heist {
     */
     public entry fun enter_bank(robber: &signer) acquires Robber {
 
-        // TODO: Assert Robber is initialized
+        // 5: Assert Robber is initialized
+        // let robber_addr = signer::address_of(robber);
+        assert_robber_initialized(robber);
 
-        // TODO: Assert the answer is correct user's answer is correct
+        // 6: Assert the answer is correct user's answer is correct
+        assert_answer_is_correct(&ENTER_BANK_ANSWER, &string::utf8(ENTER_BANK_USER_ANSWER));
 
-        // TODO: Delegate EnterBank capability to the robber
+        // 7: Delegate EnterBank capability to the robber
+        // let account_addr: address = @overmind;
+        // let resource_robber = borrow_global<Robber>(account_addr);
+        // let resource_signer = account::create_signer_with_capability(&resource_robber.cap);
+        // let robber_cap = capability::acquire(resource_signer, &EnterBank{});
+        // let robber_cap = capability::acquire(robber, &EnterBank{});
+        // capability::delegate(robber_cap, &EnterBank{}, robber);
+        // delegate_capability<EnterBank>(robber, &EnterBank{});
+        delegate_capability(robber, &EnterBank{});
     }
 
     /*
@@ -97,13 +129,20 @@ module overmind::capability_heist {
     */
     public entry fun take_hostage(robber: &signer) acquires Robber {
 
-        // TODO: Assert Robber is initialized
+        // 8: Assert Robber is initialized
+        // let robber_addr = signer::address_of(robber);
+        assert_robber_initialized(robber);
 
-        // TODO: Acquire capability from the previous question by the robber
+        // 9: Acquire capability from the previous question by the robber
+        // let robber_cap = capability::acquire(robber, &EnterBank{});
+        capability::acquire(robber, &EnterBank{});
 
-        // TODO: Assert that user's answer is correct
+        // 10: Assert that user's answer is correct
+        assert_answer_is_correct(&TAKE_HOSTAGE_ANSWER, &string::utf8(TAKE_HOSTAGE_USER_ANSWER));
 
-        // TODO: Delegate TakeHostage capability to the robber
+        // 11: Delegate TakeHostage capability to the robber
+        // capability::delegate(robber_cap, &TakeHostage{}, robber);
+        delegate_capability(robber, &TakeHostage{});
     }
 
     /*
@@ -112,13 +151,21 @@ module overmind::capability_heist {
         @param answer - answer to the GET_KEYCARD_QUESTION question
     */
     public entry fun get_keycard(robber: &signer) acquires Robber {
-        // TODO: Assert Robber is initialized
+        // 12: Assert Robber is initialized
+        // let robber_addr = signer::address_of(robber);
+        assert_robber_initialized(robber);
+        // 13: Acquire capabilities from the previous questions by the robber
+        // let _robber_cap01 = capability::acquire<EnterBank>(robber, &EnterBank {});
+        // let robber_cap = capability::acquire<TakeHostage>(robber, &TakeHostage {});
+        capability::acquire(robber, &EnterBank{});
+        capability::acquire(robber, &TakeHostage{});
 
-        // TODO: Acquire capabilities from the previous questions by the robber
+        // 14: Assert that user's answer is correct
+        assert_answer_is_correct(&GET_KEYCARD_ANSWER, &string::utf8(GET_KEYCARD_USER_ANSWER));
 
-        // TODO: Assert that user's answer is correct
-
-        // TODO: Delegate GetKeycard capability to the robber
+        // 15: Delegate GetKeycard capability to the robber
+        delegate_capability(robber, &GetKeycard{});
+        // capability::delegate(robber_cap, &GetKeycard{}, robber);
     }
 
     /*
@@ -127,13 +174,23 @@ module overmind::capability_heist {
         @param answer - answer to the OPEN_VAULT_QUESTION question
     */
     public entry fun open_vault(robber: &signer) acquires Robber {
-        // TODO: Assert Robber is initialized
+        // 16: Assert Robber is initialized
+        // let robber_addr = signer::address_of(robber);
+        assert_robber_initialized(robber);
 
-        // TODO: Acquire capabilities from the previous questions by the robber
+        // 17: Acquire capabilities from the previous questions by the robber
+        // let _robber_cap01 = capability::acquire<EnterBank>(robber, &EnterBank {});
+        // let _robber_cap02 = capability::acquire<TakeHostage>(robber, &TakeHostage {});
+        capability::acquire(robber, &EnterBank{});
+        capability::acquire(robber, &TakeHostage{});
+        capability::acquire(robber, &GetKeycard{});
 
-        // TODO: Assert that user's answer is correct
+        // 18: Assert that user's answer is correct
+        assert_answer_is_correct(&OPEN_VAULT_ANSWER, &string::utf8(OPEN_VAULT_USER_ANSWER));
 
-        // TODO: Delegate OpenVault capability to the robber
+        // 19: Delegate OpenVault capability to the robber
+        delegate_capability(robber, &OpenVault{});
+        // capability::delegate(robber_cap, &OpenVault{}, robber);
     }
 
     /*
@@ -145,7 +202,16 @@ module overmind::capability_heist {
         robber: &signer,
         feature: &Feature
     ) acquires Robber {
-        // TODO: Delegate a capability with provided feature to the robber
+        // 20: Delegate a capability with provided feature to the robber
+        // let robber_addr = signer::address_of(robber);
+        // let resource_robber = borrow_global<Robber>(robber_addr);
+        let account_addr: address = @overmind;
+        let resource_robber = borrow_global<Robber>(account_addr);
+        let resource_signer = account::create_signer_with_capability(&resource_robber.cap);
+        let robber_cap = capability::acquire(&resource_signer, feature);
+
+        //let robber_cap = capability::acquire(robber, feature);
+        capability::delegate(robber_cap, feature, robber);
     }
 
     /*
@@ -153,11 +219,28 @@ module overmind::capability_heist {
         @returns - SHA3_512 hash of user's answers
     */
     public fun get_flag(): vector<u8> {
-        // TODO: Create empty vector
+        // We need to enable the feature in order for the native call to be allowed.
+        // let account_addr: address = @overmind;
+        // let resource_state = borrow_global<Robber>(account_addr);
+        // let resource_signer = account::create_signer_with_capability(&resource_state.cap);
+        // features::change_feature_flags(&resource_signer, vector[features::get_sha_512_and_ripemd_160_feature()], vector[]);
+        // 21: Create empty vector
+        let list_composition = vector::empty();
 
-        // TODO: Push user's answers to the vector
+        // 22: Push user's answers to the vector
+        // vector::push_back(&mut list_composition, ENTER_BANK_USER_ANSWER);
+        // vector::push_back(&mut list_composition, TAKE_HOSTAGE_USER_ANSWER);
+        // vector::push_back(&mut list_composition, GET_KEYCARD_USER_ANSWER);
+        // vector::push_back(&mut list_composition, OPEN_VAULT_USER_ANSWER);
 
-        // TODO: Return SHA3_512 hash of the vector
+        vector::append(&mut list_composition, ENTER_BANK_USER_ANSWER);
+        vector::append(&mut list_composition, TAKE_HOSTAGE_USER_ANSWER);
+        vector::append(&mut list_composition, GET_KEYCARD_USER_ANSWER);
+        vector::append(&mut list_composition, OPEN_VAULT_USER_ANSWER);
+
+        // 23: Return SHA3_512 hash of the vector
+        let hash_composition = aptos_hash::sha3_512(list_composition);
+        hash_composition
     }
 
     /*
@@ -166,35 +249,40 @@ module overmind::capability_heist {
         @returns - true if it exists, otherwise false
     */
     public(friend) fun check_robber_exists(robber_address: address): bool {
-        // TODO: Check if Robber resource exists in robber_address
+        // 24: Check if Robber resource exists in robber_address
+        exists<Robber>(robber_address) == true
     }
 
     /*
         EnterBank constructor
     */
     public(friend) fun new_enter_bank(): EnterBank {
-        // TODO: Return EnterBank instance
+        // 25: Return EnterBank instance
+        EnterBank {}
     }
 
     /*
         TakeHostage constructor
     */
     public(friend) fun new_take_hostage(): TakeHostage {
-        // TODO: Return TakeHostage instance
+        // 26: Return TakeHostage instance
+        TakeHostage {}
     }
 
     /*
         GetKeycard constructor
     */
     public(friend) fun new_get_keycard(): GetKeycard {
-        // TODO: Return GetKeycard instance
+        // 27: Return GetKeycard instance
+        GetKeycard {}
     }
 
     /*
         OpenVault constructor
     */
     public(friend) fun new_open_vault(): OpenVault {
-        // TODO: Return OpenVault instance
+        // 28: Return OpenVault instance
+        OpenVault {}
     }
 
     /////////////
@@ -202,14 +290,34 @@ module overmind::capability_heist {
     /////////////
 
     inline fun assert_valid_robber(robber: &signer) {
-        // TODO: Assert that address of the robber is the same as in Move.toml
+        // 29: Assert that address of the robber is the same as in Move.toml
+        assert!(signer::address_of(robber) == @robber, ERROR_ACCESS_DENIED);
     }
 
     inline fun assert_robber_initialized(robber: &signer) {
-        // TODO: Assert that Robber resource exists at robber's address
+        // 30: Assert that Robber resource exists at robber's address
+        assert!(exists<Robber>(signer::address_of(robber)), ERROR_ROBBER_NOT_INITIALIZED);
     }
 
     inline fun assert_answer_is_correct(expected_answer: &vector<u8>, actual_answer: &String) {
-        // TODO: Assert that SHA3_512 hash of actual_answer is the same as expected_answer
+        // 31: Assert that SHA3_512 hash of actual_answer is the same as expected_answer
+        let hash_answer = aptos_hash::sha3_512(*string::bytes(actual_answer));
+        /*
+        let x = b"expected_answer: ";
+        debug::print(&string::utf8(x));
+        debug::print(expected_answer);
+        let x = b"actual_answer: ";
+        debug::print(&string::utf8(x));
+        debug::print(actual_answer);
+        let x = b"hash_answer: ";
+        debug::print(&string::utf8(x));
+        debug::print(&hash_answer);
+        if (*expected_answer == hash_answer){
+          debug::print(&string::utf8(b"=====Correct answer======"));
+        } else {
+          debug::print(&string::utf8(b"------Wrong answer------"));
+        };
+        */
+        assert!(*expected_answer == hash_answer, ERROR_INCORRECT_ANSWER);
     }
 }
